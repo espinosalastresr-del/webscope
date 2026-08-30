@@ -1,44 +1,92 @@
 name: Build for iSH / musl
 
+# Produces static-ish musl binaries for constrained environments (iSH, Alpine).
+# Primary target: x86_64-unknown-linux-musl (reliable with ring/rustls).
+# i686 is NOT built: ring 0.17 fails static asserts on 32-bit musl cross builds.
+
 on:
   push:
     branches: [main, master]
   workflow_dispatch:
 
 jobs:
-  musl-i686:
+  musl-x86_64:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: i686-unknown-linux-musl
-      - name: deps
+          targets: x86_64-unknown-linux-musl
+
+      - name: Install musl toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-multilib musl-tools
-          rustup target add i686-unknown-linux-musl || true
-      - name: build
-        run: |
-          # Prefer cross if available; fall back to cargo + musl-gcc
-          cargo build --release --target i686-unknown-linux-musl || \
-          cargo build --release --target x86_64-unknown-linux-musl
+          sudo apt-get install -y musl-tools
+          rustup target add x86_64-unknown-linux-musl
+
+      - name: Build release (x86_64 musl)
+        run: cargo build --release --target x86_64-unknown-linux-musl
         env:
-          RUSTFLAGS: "-C target-feature=-crt-static"
-      - name: artifact
+          # Point C compiler at musl-gcc for the ring / aws-lc C bits
+          CC_x86_64_unknown_linux_musl: musl-gcc
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
+
+      - name: Package artifact
         run: |
+          set -euo pipefail
           mkdir -p dist
-          for t in i686-unknown-linux-musl x86_64-unknown-linux-musl; do
-            BIN=target/$t/release/webscope
-            if [ -f "$BIN" ]; then
-              strip "$BIN" || true
-              cp "$BIN" dist/webscope-$t
-              (cd dist && sha256sum webscope-$t >> SHA256SUMS)
-              file dist/webscope-$t || true
-            fi
-          done
+          BIN=target/x86_64-unknown-linux-musl/release/webscope
+          test -f "$BIN"
+          strip "$BIN" || true
+          cp "$BIN" dist/webscope-x86_64-unknown-linux-musl
+          (cd dist && sha256sum webscope-x86_64-unknown-linux-musl > SHA256SUMS)
+          file dist/webscope-x86_64-unknown-linux-musl || true
           ls -la dist/
+          # Basic smoke: binary is ELF and non-empty
+          test -s dist/webscope-x86_64-unknown-linux-musl
+
       - uses: actions/upload-artifact@v4
         with:
           name: webscope-ish
+          path: dist/
+
+  # Optional ARM64 musl (useful on aarch64 Alpine; not required for classic iSH)
+  musl-aarch64:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-musl
+
+      - name: Install cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
+
+      - name: Build release (aarch64 musl via cross)
+        run: cross build --release --target aarch64-unknown-linux-musl
+
+      - name: Package artifact
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          BIN=target/aarch64-unknown-linux-musl/release/webscope
+          if [ -f "$BIN" ]; then
+            strip "$BIN" || true
+            cp "$BIN" dist/webscope-aarch64-unknown-linux-musl
+            (cd dist && sha256sum webscope-aarch64-unknown-linux-musl > SHA256SUMS)
+            ls -la dist/
+          else
+            echo "aarch64 binary not produced"
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: webscope-ish-aarch64
           path: dist/

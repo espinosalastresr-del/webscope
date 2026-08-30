@@ -1,0 +1,17 @@
+# WebScope configuration (copy to webscope.toml)
+threads = 4
+timeout_secs = 30
+connect_timeout_secs = 10
+read_timeout_secs = 20
+max_retries = 3
+max_response_size = 2097152
+max_redirects = 5
+rate_limit_per_host = 1.0
+database = "webscope.db"
+user_agent = "WebScope/0.1 (+https://github.com/webscope/webscope; research crawler; respectful)"
+learning = true
+discovery = true
+cache = true
+log_level = "info"
+max_html_size = 1048576
+queue_capacity = 10000

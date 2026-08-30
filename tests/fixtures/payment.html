@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html><head><title>Checkout - Pay Now</title></head>
+<body>
+<h1>Complete your purchase</h1>
+<form action="/checkout" method="post">
+  <label>Email</label>
+  <input type="email" name="email" autocomplete="email">
+  <label>Card number</label>
+  <input type="text" name="cardnumber" autocomplete="cc-number" placeholder="Card number">
+  <input type="text" name="cvc" autocomplete="cc-csc" placeholder="CVC">
+  <input type="text" name="cc-exp" autocomplete="cc-exp" placeholder="MM/YY">
+  <button type="submit">Pay now</button>
+</form>
+<script src="https://js.stripe.com/v3/"></script>
+</body></html>

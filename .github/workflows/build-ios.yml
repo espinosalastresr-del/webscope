@@ -1,0 +1,44 @@
+name: Build for iSH / musl
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  musl-i686:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: i686-unknown-linux-musl
+      - name: deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib musl-tools
+          rustup target add i686-unknown-linux-musl || true
+      - name: build
+        run: |
+          # Prefer cross if available; fall back to cargo + musl-gcc
+          cargo build --release --target i686-unknown-linux-musl || \
+          cargo build --release --target x86_64-unknown-linux-musl
+        env:
+          RUSTFLAGS: "-C target-feature=-crt-static"
+      - name: artifact
+        run: |
+          mkdir -p dist
+          for t in i686-unknown-linux-musl x86_64-unknown-linux-musl; do
+            BIN=target/$t/release/webscope
+            if [ -f "$BIN" ]; then
+              strip "$BIN" || true
+              cp "$BIN" dist/webscope-$t
+              (cd dist && sha256sum webscope-$t >> SHA256SUMS)
+              file dist/webscope-$t || true
+            fi
+          done
+          ls -la dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: webscope-ish
+          path: dist/

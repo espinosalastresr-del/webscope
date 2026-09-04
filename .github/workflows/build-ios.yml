@@ -23,10 +23,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y musl-tools
-          rustup target add x86_64-unknown-linux-musl
+          rustup target add i686-unknown-linux-musl
 
       - name: Build release (x86_64 musl)
-        run: cargo build --release --target x86_64-unknown-linux-musl
+        run: cargo build --release --target i686-unknown-linux-musl
         env:
           # Point C compiler at musl-gcc for the ring / aws-lc C bits
           CC_x86_64_unknown_linux_musl: musl-gcc

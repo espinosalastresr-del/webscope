@@ -12,7 +12,8 @@ categories = ["command-line-utilities", "web-programming"]
 
 [dependencies]
 tokio = { version = "1", features = ["full", "signal"] }
-reqwest = { version = "0.12", default-features = false, features = ["aws-lc-rs", "gzip", "brotli", "cookies", "json", "stream"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "gzip", "brotli", "cookies", "json", "stream"] }
+ring = "=0.16.20"  # Versión anterior sin el bug de compilación
 clap = { version = "4", features = ["derive", "env"] }
 url = "2"
 serde = { version = "1", features = ["derive"] }
@@ -34,6 +35,10 @@ uuid = { version = "1", features = ["v4", "serde"] }
 rand = "0.8"
 bytes = "1"
 csv = "1"
+
+# Para forzar que todas las dependencias usen ring 0.16.20
+[patch.crates-io]
+ring = { version = "=0.16.20" }
 
 [dev-dependencies]
 tempfile = "3"
